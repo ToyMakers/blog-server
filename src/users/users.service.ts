@@ -58,6 +58,9 @@ export class UsersService {
       user.bio = updateUserDto.bio;
     }
 
-    return user.save();
+    const updatedUser = await user.save();
+    const { password, ...result } = updatedUser.toObject();
+
+    return result;
   }
 }
