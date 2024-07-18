@@ -10,11 +10,7 @@ export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async register(registerDto: RegisterDto): Promise<User> {
-    const { username, password, confirmPassword, nickname, bio } = registerDto;
-
-    if (password !== confirmPassword) {
-      throw new BadRequestException('Passwords do not match');
-    }
+    const { username, password, nickname, bio } = registerDto;
 
     const existingUser = await this.userModel.findOne({ username });
     if (existingUser) {

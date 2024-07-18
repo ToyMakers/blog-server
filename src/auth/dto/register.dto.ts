@@ -1,3 +1,4 @@
+// src/auth/dto/register.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsNotEmpty,
@@ -33,14 +34,6 @@ export class RegisterDto {
     },
   )
   password: string;
-
-  @ApiProperty({
-    example: 'password123!',
-    description: "The user's password confirmation",
-  })
-  @IsNotEmpty()
-  @IsString()
-  confirmPassword: string;
 
   @ApiProperty({ example: 'JohnDoe', description: "The user's nickname" })
   @IsNotEmpty()
