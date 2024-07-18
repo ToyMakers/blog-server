@@ -28,4 +28,8 @@ export class UsersService {
 
     return user.save();
   }
+
+  async findOne(username: string): Promise<User | undefined> {
+    return this.userModel.findOne({ username }).exec();
+  }
 }
