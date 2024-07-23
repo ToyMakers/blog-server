@@ -1,4 +1,12 @@
-import { Controller, Patch, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Patch,
+  Body,
+  UseGuards,
+  Req,
+  Get,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -20,6 +28,33 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found.' })
   async updateUser(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
     const userId = req.user['userId'];
-    return this.usersService.updateUser(userId, updateUserDto);
+    try {
+      return await this.usersService.updateUser(userId, updateUserDto);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException('User not found');
+      }
+      throw error;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  @ApiOperation({ summary: 'Get user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'The user profile has been successfully retrieved.',
+  })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async getUserProfile(@Req() req: Request) {
+    const userId = req.user['userId'];
+    try {
+      return await this.usersService.findOneById(userId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException('User not found');
+      }
+      throw error;
+    }
   }
 }

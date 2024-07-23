@@ -39,28 +39,45 @@ export class UsersService {
   }
 
   async findOneById(userId: string): Promise<UserDocument | undefined> {
-    return this.userModel.findById(userId).exec();
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  async isNicknameTaken(
+    nickname: string,
+    currentUserId: string,
+  ): Promise<boolean> {
+    const user = await this.userModel.findOne({ nickname }).exec();
+    return user && user._id.toString() !== currentUserId;
   }
 
   async updateUser(
     userId: string,
     updateUserDto: UpdateUserDto,
-  ): Promise<User> {
+  ): Promise<UserDocument> {
     const user = await this.findOneById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     if (updateUserDto.nickname) {
+      const isTaken = await this.isNicknameTaken(
+        updateUserDto.nickname,
+        userId,
+      );
+      if (isTaken) {
+        throw new BadRequestException('Nickname already taken');
+      }
       user.nickname = updateUserDto.nickname;
     }
+
     if (updateUserDto.bio) {
       user.bio = updateUserDto.bio;
     }
 
-    const updatedUser = await user.save();
-    const { password, ...result } = updatedUser.toObject();
-
-    return result;
+    return user.save();
   }
 }
