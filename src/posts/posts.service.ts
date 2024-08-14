@@ -100,6 +100,14 @@ export class PostsService {
       .exec();
   }
 
+  async findByAuthor(authorId: Types.ObjectId): Promise<PostDocument[]> {
+    return this.postModel
+      .find({ author: authorId })
+      .populate('author', 'username nickname')
+      .populate('categories')
+      .exec();
+  }
+
   private async validateCategories(
     categoryNames: string[],
   ): Promise<Types.ObjectId[]> {

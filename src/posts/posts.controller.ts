@@ -76,6 +76,27 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('me')
+  @ApiOperation({ summary: 'Get posts created by the authenticated user' })
+  @ApiResponse({
+    status: 200,
+    description: 'The posts have been successfully retrieved.',
+    type: [PostResponseDto],
+  })
+  async findMyPosts(@Req() req: Request): Promise<PostResponseDto[]> {
+    const userId = new Types.ObjectId(req.user['userId']);
+    const posts = await this.postsService.findByAuthor(userId);
+    return posts.map((post) => ({
+      title: post.title,
+      content: post.content,
+      author: post.author['username'],
+      categories: post.categories.map((category) => category.toString()),
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+    }));
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Update an existing post' })
   @ApiResponse({
