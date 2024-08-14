@@ -1,12 +1,11 @@
 import {
   Controller,
-  Post,
-  Body,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
-  Query,
+  Body,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -14,8 +13,8 @@ import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostResponseDto } from './dto/post-response.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
 import { Types } from 'mongoose';
 
@@ -43,57 +42,42 @@ export class PostsController {
       content: post.content,
       author: post.author['username'],
       categories: post.categories.map((category) => category.toString()),
+      likes: post.likes,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      isLikedByUser: false,
     };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
-  @ApiOperation({ summary: 'Get all posts or filter by categories' })
-  @ApiQuery({
-    name: 'categories',
-    required: false,
-    description: 'Comma separated list of categories to filter posts',
+  @ApiOperation({
+    summary: 'Get all posts with like status for the current user',
   })
   @ApiResponse({
     status: 200,
     description: 'The posts have been successfully retrieved.',
     type: [PostResponseDto],
   })
-  async findAll(
-    @Query('categories') categories?: string,
-  ): Promise<PostResponseDto[]> {
-    const categoryArray = categories ? categories.split(',') : undefined;
-    const posts = await this.postsService.findAll(categoryArray);
-    return posts.map((post) => ({
-      title: post.title,
-      content: post.content,
-      author: post.author['username'],
-      categories: post.categories.map((category) => category.toString()),
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-    }));
+  async findAll(@Req() req: Request): Promise<PostResponseDto[]> {
+    const userId = new Types.ObjectId(req.user['userId']);
+    return this.postsService.findAllWithLikeStatus(userId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('me')
-  @ApiOperation({ summary: 'Get posts created by the authenticated user' })
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a post with like status for the current user' })
   @ApiResponse({
     status: 200,
-    description: 'The posts have been successfully retrieved.',
-    type: [PostResponseDto],
+    description: 'The post with like status has been successfully retrieved.',
+    type: PostResponseDto,
   })
-  async findMyPosts(@Req() req: Request): Promise<PostResponseDto[]> {
+  async findOne(
+    @Param('id') postId: string,
+    @Req() req: Request,
+  ): Promise<PostResponseDto> {
     const userId = new Types.ObjectId(req.user['userId']);
-    const posts = await this.postsService.findByAuthor(userId);
-    return posts.map((post) => ({
-      title: post.title,
-      content: post.content,
-      author: post.author['username'],
-      categories: post.categories.map((category) => category.toString()),
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-    }));
+    return this.postsService.findOneWithLikeStatus(postId, userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -103,10 +87,6 @@ export class PostsController {
     status: 200,
     description: 'The post has been successfully updated.',
     type: PostResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden. You do not have permission to edit this post.',
   })
   async updatePost(
     @Param('id') postId: string,
@@ -124,8 +104,10 @@ export class PostsController {
       content: post.content,
       author: post.author['username'],
       categories: post.categories.map((category) => category.toString()),
+      likes: post.likes,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      isLikedByUser: post.likedBy.includes(currentUserId),
     };
   }
 
@@ -136,10 +118,6 @@ export class PostsController {
     status: 200,
     description: 'The post has been successfully deleted.',
   })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden. You do not have permission to delete this post.',
-  })
   async deletePost(
     @Param('id') postId: string,
     @Req() req: Request,
@@ -148,22 +126,29 @@ export class PostsController {
     return this.postsService.deletePost(postId, currentUserId);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a single post by ID' })
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/like')
+  @ApiOperation({ summary: 'Like a post' })
   @ApiResponse({
     status: 200,
-    description: 'The post has been successfully retrieved.',
+    description: 'The post has been successfully liked.',
     type: PostResponseDto,
   })
-  async findOne(@Param('id') postId: string): Promise<PostResponseDto> {
-    const post = await this.postsService.findOne(postId);
+  async likePost(
+    @Param('id') postId: string,
+    @Req() req: Request,
+  ): Promise<PostResponseDto> {
+    const userId = new Types.ObjectId(req.user['userId']);
+    const post = await this.postsService.likePost(postId, userId);
     return {
       title: post.title,
       content: post.content,
       author: post.author['username'],
       categories: post.categories.map((category) => category.toString()),
+      likes: post.likes,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      isLikedByUser: true,
     };
   }
 }

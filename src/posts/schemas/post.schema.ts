@@ -17,8 +17,11 @@ export class Post {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Category' }] })
   categories: Types.ObjectId[];
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Comment' }] })
-  comments: Types.ObjectId[];
+  @Prop({ default: 0 })
+  likes: number;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
+  likedBy: Types.ObjectId[];
 
   @Prop()
   createdAt: Date;

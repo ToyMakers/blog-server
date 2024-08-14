@@ -1,6 +1,7 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,7 +10,7 @@ import { Post, PostDocument } from './schemas/post.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { CategoriesService } from '../categories/categories.service';
-import { CategoryDocument } from '../categories/schemas/category.schema';
+import { PostResponseDto } from './dto/post-response.dto';
 
 @Injectable()
 export class PostsService {
@@ -73,7 +74,31 @@ export class PostsService {
     await this.postModel.findByIdAndDelete(postId);
   }
 
-  async findOne(postId: string): Promise<PostDocument> {
+  async findAllWithLikeStatus(
+    userId: Types.ObjectId,
+  ): Promise<PostResponseDto[]> {
+    const posts = await this.postModel
+      .find()
+      .populate('author', 'username nickname')
+      .populate('categories')
+      .exec();
+
+    return posts.map((post) => ({
+      title: post.title,
+      content: post.content,
+      author: post.author['username'],
+      categories: post.categories.map((category) => category.toString()),
+      likes: post.likes,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      isLikedByUser: post.likedBy.includes(userId),
+    }));
+  }
+
+  async findOneWithLikeStatus(
+    postId: string,
+    userId: Types.ObjectId,
+  ): Promise<PostResponseDto> {
     const post = await this.postModel
       .findById(postId)
       .populate('author', 'username nickname')
@@ -82,30 +107,36 @@ export class PostsService {
     if (!post) {
       throw new NotFoundException('Post not found');
     }
-    return post;
+
+    return {
+      title: post.title,
+      content: post.content,
+      author: post.author['username'],
+      categories: post.categories.map((category) => category.toString()),
+      likes: post.likes,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      isLikedByUser: post.likedBy.includes(userId),
+    };
   }
 
-  async findAll(categories?: string[]): Promise<PostDocument[]> {
-    const query = categories
-      ? {
-          categories: {
-            $elemMatch: { $in: await this.validateCategories(categories) },
-          },
-        }
-      : {};
-    return this.postModel
-      .find(query)
-      .populate('author', 'username nickname')
-      .populate('categories')
-      .exec();
-  }
+  async likePost(
+    postId: string,
+    userId: Types.ObjectId,
+  ): Promise<PostDocument> {
+    const post = await this.postModel.findById(postId);
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
 
-  async findByAuthor(authorId: Types.ObjectId): Promise<PostDocument[]> {
-    return this.postModel
-      .find({ author: authorId })
-      .populate('author', 'username nickname')
-      .populate('categories')
-      .exec();
+    if (post.likedBy.includes(userId)) {
+      throw new BadRequestException('You have already liked this post');
+    }
+
+    post.likes += 1;
+    post.likedBy.push(userId);
+
+    return post.save();
   }
 
   private async validateCategories(
@@ -117,9 +148,7 @@ export class PostsService {
 
     const validCategoryIds = await Promise.all(
       categoryNames.map(async (name): Promise<Types.ObjectId> => {
-        let category = (await this.categoriesService.findByName(
-          name,
-        )) as CategoryDocument;
+        let category = await this.categoriesService.findByName(name);
         if (!category) {
           category = await this.categoriesService.create({ name });
         }

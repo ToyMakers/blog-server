@@ -33,4 +33,16 @@ export class PostResponseDto {
     description: 'The last update date of the post',
   })
   updatedAt: Date;
+
+  @ApiProperty({
+    example: 42,
+    description: 'The number of likes for the post',
+  })
+  likes: number;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates whether the current user has liked the post',
+  })
+  isLikedByUser: boolean;
 }
