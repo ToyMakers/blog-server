@@ -4,6 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PostsModule } from './posts/posts.module';
 import { CategoriesModule } from './categories/categories.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { CategoriesModule } from './categories/categories.module';
     UsersModule,
     PostsModule,
     CategoriesModule,
+    CommentsModule,
   ],
   controllers: [],
   providers: [],
