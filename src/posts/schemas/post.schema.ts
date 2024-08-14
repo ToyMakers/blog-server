@@ -14,8 +14,8 @@ export class Post {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   author: Types.ObjectId;
 
-  @Prop({ type: [String], default: [] })
-  categories: string[];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Category' }] })
+  categories: Types.ObjectId[];
 
   @Prop()
   createdAt: Date;

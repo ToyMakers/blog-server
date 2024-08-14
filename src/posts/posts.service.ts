@@ -8,17 +8,24 @@ import { Model, Types } from 'mongoose';
 import { Post, PostDocument } from './schemas/post.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { CategoriesService } from '../categories/categories.service';
+import { CategoryDocument } from '../categories/schemas/category.schema';
 
 @Injectable()
 export class PostsService {
-  constructor(@InjectModel(Post.name) private postModel: Model<PostDocument>) {}
+  constructor(
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    private readonly categoriesService: CategoriesService,
+  ) {}
 
   async createPost(
     createPostDto: CreatePostDto,
     authorId: Types.ObjectId,
   ): Promise<PostDocument> {
+    const categoryIds = await this.validateCategories(createPostDto.categories);
     const post = new this.postModel({
       ...createPostDto,
+      categories: categoryIds,
       author: authorId,
     });
     return post.save();
@@ -38,6 +45,10 @@ export class PostsService {
       throw new ForbiddenException(
         'You do not have permission to edit this post',
       );
+    }
+
+    if (updatePostDto.categories) {
+      post.categories = await this.validateCategories(updatePostDto.categories);
     }
 
     Object.assign(post, updatePostDto);
@@ -66,6 +77,7 @@ export class PostsService {
     const post = await this.postModel
       .findById(postId)
       .populate('author', 'username nickname')
+      .populate('categories')
       .exec();
     if (!post) {
       throw new NotFoundException('Post not found');
@@ -77,13 +89,36 @@ export class PostsService {
     const query = categories
       ? {
           categories: {
-            $elemMatch: { $regex: categories.join('|'), $options: 'i' },
+            $elemMatch: { $in: await this.validateCategories(categories) },
           },
         }
       : {};
     return this.postModel
       .find(query)
       .populate('author', 'username nickname')
+      .populate('categories')
       .exec();
+  }
+
+  private async validateCategories(
+    categoryNames: string[],
+  ): Promise<Types.ObjectId[]> {
+    if (!categoryNames || !categoryNames.length) {
+      return [];
+    }
+
+    const validCategoryIds = await Promise.all(
+      categoryNames.map(async (name): Promise<Types.ObjectId> => {
+        let category = (await this.categoriesService.findByName(
+          name,
+        )) as CategoryDocument;
+        if (!category) {
+          category = await this.categoriesService.create({ name });
+        }
+        return category._id as Types.ObjectId;
+      }),
+    );
+
+    return validCategoryIds;
   }
 }

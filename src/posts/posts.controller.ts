@@ -1,4 +1,3 @@
-// src/posts/posts.controller.ts
 import {
   Controller,
   Post,
@@ -43,10 +42,37 @@ export class PostsController {
       title: post.title,
       content: post.content,
       author: post.author['username'],
-      categories: post.categories,
+      categories: post.categories.map((category) => category.toString()),
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
     };
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all posts or filter by categories' })
+  @ApiQuery({
+    name: 'categories',
+    required: false,
+    description: 'Comma separated list of categories to filter posts',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The posts have been successfully retrieved.',
+    type: [PostResponseDto],
+  })
+  async findAll(
+    @Query('categories') categories?: string,
+  ): Promise<PostResponseDto[]> {
+    const categoryArray = categories ? categories.split(',') : undefined;
+    const posts = await this.postsService.findAll(categoryArray);
+    return posts.map((post) => ({
+      title: post.title,
+      content: post.content,
+      author: post.author['username'],
+      categories: post.categories.map((category) => category.toString()),
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+    }));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -76,7 +102,7 @@ export class PostsController {
       title: post.title,
       content: post.content,
       author: post.author['username'],
-      categories: post.categories,
+      categories: post.categories.map((category) => category.toString()),
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
     };
@@ -114,36 +140,9 @@ export class PostsController {
       title: post.title,
       content: post.content,
       author: post.author['username'],
-      categories: post.categories,
+      categories: post.categories.map((category) => category.toString()),
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
     };
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'Get all posts or filter by categories' })
-  @ApiQuery({
-    name: 'categories',
-    required: false,
-    description: 'Comma separated list of categories to filter posts',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'The posts have been successfully retrieved.',
-    type: [PostResponseDto],
-  })
-  async findAll(
-    @Query('categories') categories?: string,
-  ): Promise<PostResponseDto[]> {
-    const categoryArray = categories ? categories.split(',') : undefined;
-    const posts = await this.postsService.findAll(categoryArray);
-    return posts.map((post) => ({
-      title: post.title,
-      content: post.content,
-      author: post.author['username'],
-      categories: post.categories,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-    }));
   }
 }
