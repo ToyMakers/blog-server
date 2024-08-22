@@ -15,8 +15,7 @@ export class RegisterDto {
   })
   @IsNotEmpty()
   @IsString()
-  @MinLength(8)
-  @MaxLength(20)
+  @MaxLength(8)
   @Matches(/^[a-zA-Z0-9]+$/, {
     message: 'Username must contain only letters and numbers',
   })
