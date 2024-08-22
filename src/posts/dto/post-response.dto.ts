@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class PostResponseDto {
+  @ApiProperty({
+    example: '507f1f77bcf86cd799439011',
+    description: 'The unique identifier of the post',
+  })
+  id: string;
+
   @ApiProperty({ example: 'Post Title', description: 'The title of the post' })
   title: string;
 

@@ -38,6 +38,7 @@ export class PostsController {
     const authorId = new Types.ObjectId(req.user['userId']);
     const post = await this.postsService.createPost(createPostDto, authorId);
     return {
+      id: post._id.toString(),
       title: post.title,
       content: post.content,
       author: post.author['username'],
@@ -100,6 +101,7 @@ export class PostsController {
       currentUserId,
     );
     return {
+      id: post._id.toString(),
       title: post.title,
       content: post.content,
       author: post.author['username'],
@@ -141,6 +143,7 @@ export class PostsController {
     const userId = new Types.ObjectId(req.user['userId']);
     const post = await this.postsService.likePost(postId, userId);
     return {
+      id: post._id.toString(),
       title: post.title,
       content: post.content,
       author: post.author['username'],

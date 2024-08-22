@@ -84,6 +84,7 @@ export class PostsService {
       .exec();
 
     return posts.map((post) => ({
+      id: post._id.toString(),
       title: post.title,
       content: post.content,
       author: post.author['username'],
@@ -109,6 +110,7 @@ export class PostsService {
     }
 
     return {
+      id: post._id.toString(),
       title: post.title,
       content: post.content,
       author: post.author['username'],
