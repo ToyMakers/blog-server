@@ -87,7 +87,7 @@ export class PostsService {
       id: post._id.toString(),
       title: post.title,
       content: post.content,
-      author: post.author['username'],
+      author: post.author?.['username'],
       categories: post.categories.map((category) => category.toString()),
       likes: post.likes,
       createdAt: post.createdAt,
