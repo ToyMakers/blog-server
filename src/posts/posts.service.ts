@@ -79,6 +79,7 @@ export class PostsService {
   ): Promise<PostResponseDto[]> {
     const posts = await this.postModel
       .find()
+      .sort({ createdAt: -1 })
       .populate('author', 'username nickname')
       .populate('categories')
       .exec();
