@@ -22,21 +22,27 @@ export class PostsService {
   async createPost(
     createPostDto: CreatePostDto,
     authorId: Types.ObjectId,
-  ): Promise<PostDocument> {
+  ): Promise<PostResponseDto> {
     const categoryIds = await this.validateCategories(createPostDto.categories);
     const post = new this.postModel({
       ...createPostDto,
       categories: categoryIds,
       author: authorId,
     });
-    return post.save();
+    await post.save();
+
+    const savedPost = await this.findOneWithLikeStatus(
+      post._id.toString(),
+      authorId,
+    );
+    return savedPost;
   }
 
   async updatePost(
     postId: string,
     updatePostDto: UpdatePostDto,
     currentUserId: Types.ObjectId,
-  ): Promise<PostDocument> {
+  ): Promise<PostResponseDto> {
     const post = await this.postModel.findById(postId);
     if (!post) {
       throw new NotFoundException('Post not found');
@@ -53,7 +59,10 @@ export class PostsService {
     }
 
     Object.assign(post, updatePostDto);
-    return post.save();
+    await post.save();
+
+    const updatedPost = await this.findOneWithLikeStatus(postId, currentUserId);
+    return updatedPost;
   }
 
   async deletePost(
@@ -77,19 +86,52 @@ export class PostsService {
   async findAllWithLikeStatus(
     userId: Types.ObjectId,
   ): Promise<PostResponseDto[]> {
-    const posts = await this.postModel
-      .find()
-      .sort({ createdAt: -1 })
-      .populate('author', 'username nickname')
-      .populate('categories')
-      .exec();
+    const posts = await this.postModel.aggregate([
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'categories',
+          foreignField: '_id',
+          as: 'categoryDetails',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'author',
+          foreignField: '_id',
+          as: 'authorDetails',
+        },
+      },
+      {
+        $unwind: '$authorDetails',
+      },
+      {
+        $project: {
+          title: 1,
+          content: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          likedBy: 1,
+          author: '$authorDetails.username',
+          categories: {
+            $map: {
+              input: '$categoryDetails',
+              as: 'category',
+              in: '$$category.name',
+            },
+          },
+        },
+      },
+    ]);
 
     return posts.map((post) => ({
       id: post._id.toString(),
       title: post.title,
       content: post.content,
-      author: post.author?.['username'],
-      categories: post.categories.map((category) => category.toString()),
+      author: post.author,
+      categories: post.categories,
       likes: post.likes,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
@@ -101,21 +143,59 @@ export class PostsService {
     postId: string,
     userId: Types.ObjectId,
   ): Promise<PostResponseDto> {
-    const post = await this.postModel
-      .findById(postId)
-      .populate('author', 'username nickname')
-      .populate('categories')
-      .exec();
-    if (!post) {
+    const posts = await this.postModel.aggregate([
+      { $match: { _id: new Types.ObjectId(postId) } },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'categories',
+          foreignField: '_id',
+          as: 'categoryDetails',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'author',
+          foreignField: '_id',
+          as: 'authorDetails',
+        },
+      },
+      {
+        $unwind: '$authorDetails',
+      },
+      {
+        $project: {
+          title: 1,
+          content: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          likedBy: 1,
+          author: '$authorDetails.username',
+          categories: {
+            $map: {
+              input: '$categoryDetails',
+              as: 'category',
+              in: '$$category.name',
+            },
+          },
+        },
+      },
+    ]);
+
+    if (!posts || posts.length === 0) {
       throw new NotFoundException('Post not found');
     }
+
+    const post = posts[0];
 
     return {
       id: post._id.toString(),
       title: post.title,
       content: post.content,
-      author: post.author['username'],
-      categories: post.categories.map((category) => category.toString()),
+      author: post.author,
+      categories: post.categories,
       likes: post.likes,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
@@ -126,7 +206,7 @@ export class PostsService {
   async likePost(
     postId: string,
     userId: Types.ObjectId,
-  ): Promise<PostDocument> {
+  ): Promise<PostResponseDto> {
     const post = await this.postModel.findById(postId);
     if (!post) {
       throw new NotFoundException('Post not found');
@@ -139,7 +219,10 @@ export class PostsService {
     post.likes += 1;
     post.likedBy.push(userId);
 
-    return post.save();
+    await post.save();
+
+    const likePost = await this.findOneWithLikeStatus(postId, userId);
+    return likePost;
   }
 
   private async validateCategories(

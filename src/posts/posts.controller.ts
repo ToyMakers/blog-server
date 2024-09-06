@@ -36,18 +36,7 @@ export class PostsController {
     @Req() req: Request,
   ): Promise<PostResponseDto> {
     const authorId = new Types.ObjectId(req.user['userId']);
-    const post = await this.postsService.createPost(createPostDto, authorId);
-    return {
-      id: post._id.toString(),
-      title: post.title,
-      content: post.content,
-      author: post.author['nickname'],
-      categories: post.categories.map((category) => category.toString()),
-      likes: post.likes,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      isLikedByUser: false,
-    };
+    return this.postsService.createPost(createPostDto, authorId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -95,22 +84,11 @@ export class PostsController {
     @Req() req: Request,
   ): Promise<PostResponseDto> {
     const currentUserId = new Types.ObjectId(req.user['userId']);
-    const post = await this.postsService.updatePost(
+    return await this.postsService.updatePost(
       postId,
       updatePostDto,
       currentUserId,
     );
-    return {
-      id: post._id.toString(),
-      title: post.title,
-      content: post.content,
-      author: post.author['nickname'],
-      categories: post.categories.map((category) => category.toString()),
-      likes: post.likes,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      isLikedByUser: post.likedBy.includes(currentUserId),
-    };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -141,17 +119,6 @@ export class PostsController {
     @Req() req: Request,
   ): Promise<PostResponseDto> {
     const userId = new Types.ObjectId(req.user['userId']);
-    const post = await this.postsService.likePost(postId, userId);
-    return {
-      id: post._id.toString(),
-      title: post.title,
-      content: post.content,
-      author: post.author['nickname'],
-      categories: post.categories.map((category) => category.toString()),
-      likes: post.likes,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      isLikedByUser: true,
-    };
+    return this.postsService.likePost(postId, userId);
   }
 }
