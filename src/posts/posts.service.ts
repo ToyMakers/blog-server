@@ -106,6 +106,7 @@ export class PostsService {
       {
         $unwind: '$authorDetails',
       },
+      { $sort: { createdAt: -1 } },
       {
         $project: {
           title: 1,
